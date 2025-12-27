@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Public Email Server - Termux</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/3178/3178158.png">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-envelope-open-text"></i>
+                <h1>Public Email Server</h1>
+            </div>
+            <div class="server-status">
+                <span class="status-indicator active"></span>
+                <span class="status-text">Online</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="dashboard">
+            <!-- Left Panel: Email Generation -->
+            <section class="panel left-panel">
+                <div class="card">
+                    <h2><i class="fas fa-plus-circle"></i> Generate Email</h2>
+                    
+                    <div class="email-type-selector">
+                        <button class="type-btn active" data-type="public">
+                            <i class="fas fa-globe"></i>
+                            <span>Public Email</span>
+                            <small>Receive from anywhere</small>
+                        </button>
+                        <button class="type-btn" data-type="local">
+                            <i class="fas fa-home"></i>
+                            <span>Local Email</span>
+                            <small>Local network only</small>
+                        </button>
+                    </div>
+
+                    <div class="custom-email-form">
+                        <div class="form-group">
+                            <label for="username">
+                                <i class="fas fa-user"></i> Username (optional)
+                            </label>
+                            <input type="text" id="username" placeholder="e.g., john_doe">
+                        </div>
+                        <div class="form-group">
+                            <label for="domain">
+                                <i class="fas fa-server"></i> Domain
+                            </label>
+                            <select id="domain">
+                                <option value="">Auto-select</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button id="generateBtn" class="generate-btn">
+                        <i class="fas fa-bolt"></i> Generate Email Address
+                    </button>
+
+                    <div id="emailResult" class="email-result" style="display: none;">
+                        <div class="success-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h3>Your Email Address</h3>
+                        <div class="generated-email" id="generatedEmail"></div>
+                        <div class="email-info">
+                            <div class="info-row">
+                                <span class="label">SMTP Server:</span>
+                                <span class="value" id="smtpServer"></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Port:</span>
+                                <span class="value">1025</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Auth Required:</span>
+                                <span class="value">No</span>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button onclick="copyEmail()" class="action-btn copy-btn">
+                                <i class="fas fa-copy"></i> Copy Email
+                            </button>
+                            <button onclick="shareEmail()" class="action-btn share-btn">
+                                <i class="fas fa-share-alt"></i> Share
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Server Info Card -->
+                <div class="card server-info">
+                    <h2><i class="fas fa-server"></i> Server Information</h2>
+                    <div class="server-stats">
+                        <div class="stat">
+                            <div class="stat-icon">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="totalEmails">0</span>
+                                <span class="stat-label">Total Emails</span>
+                            </div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="activeAddresses">0</span>
+                                <span class="stat-label">Active Addresses</span>
+                            </div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="uptime">0s</span>
+                                <span class="stat-label">Uptime</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="server-details">
+                        <h3>Connection Details</h3>
+                        <div class="detail-item">
+                            <span>Public IP:</span>
+                            <code id="publicIP">Detecting...</code>
+                        </div>
+                        <div class="detail-item">
+                            <span>Web Interface:</span>
+                            <code id="webUrl">http://localhost:3000</code>
+                        </div>
+                        <div class="detail-item">
+                            <span>SMTP Status:</span>
+                            <span class="status-badge online">Running</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Email Inbox -->
+            <section class="panel right-panel">
+                <div class="card inbox-card">
+                    <div class="inbox-header">
+                        <h2>
+                            <i class="fas fa-inbox"></i>
+                            Inbox: <span id="currentEmailDisplay">No email selected</span>
+                        </h2>
+                        <div class="inbox-controls">
+                            <button id="refreshInbox" class="icon-btn" title="Refresh">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button id="deleteAll" class="icon-btn delete-btn" title="Delete All">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="email-list-container">
+                        <div id="emailList" class="email-list">
+                            <!-- Emails will load here -->
+                            <div class="empty-inbox">
+                                <i class="fas fa-envelope-open"></i>
+                                <h3>No emails yet</h3>
+                                <p>Generate an email address and start receiving!</p>
+                            </div>
+                        </div>
+
+                        <div id="emailDetail" class="email-detail" style="display: none;">
+                            <div class="email-detail-header">
+                                <button id="backToList" class="back-btn">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </button>
+                                <h3 id="emailSubject">Email Subject</h3>
+                            </div>
+                            <div class="email-detail-content">
+                                <div class="email-meta">
+                                    <div class="meta-item">
+                                        <span class="meta-label">From:</span>
+                                        <span class="meta-value" id="detailFrom"></span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">To:</span>
+                                        <span class="meta-value" id="detailTo"></span>
+                                    </div>
+                                    <div class="meta-item">
+                                        <span class="meta-label">Date:</span>
+                                        <span class="meta-value" id="detailDate"></span>
+                                    </div>
+                                </div>
+                                <div class="email-body">
+                                    <div class="email-body-text" id="emailBodyText"></div>
+                                    <div class="email-body-html" id="emailBodyHtml" style="display: none;"></div>
+                                </div>
+                                <div class="email-actions">
+                                    <button onclick="replyToEmail()" class="action-btn">
+                                        <i class="fas fa-reply"></i> Reply
+                                    </button>
+                                    <button onclick="deleteCurrentEmail()" class="action-btn delete-btn">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructions Card -->
+                <div class="card instructions">
+                    <h2><i class="fas fa-graduation-cap"></i> How to Use</h2>
+                    <div class="steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Generate Email</h4>
+                                <p>Create a public or local email address</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Share Address</h4>
+                                <p>Use this email anywhere online</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Receive Emails</h4>
+                                <p>Emails appear instantly in your inbox</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="code-examples">
+                        <h3>Send Email Example:</h3>
+                        <pre><code>import smtplib
+
+msg = """From: sender@example.com
+To: YOUR_EMAIL@YOUR_IP
+Subject: Test Email
+
+This is a test email!"""
+
+server = smtplib.SMTP('YOUR_IP', 1025)
+server.sendmail('sender@example.com', 
+                ['YOUR_EMAIL@YOUR_IP'], 
+                msg)
+server.quit()</code></pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Public Email Server</h3>
+                    <p>Temporary email service running on Termux</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <button onclick="showHelp()" class="footer-link">
+                        <i class="fas fa-question-circle"></i> Help
+                    </button>
+                    <button onclick="showSettings()" class="footer-link">
+                        <i class="fas fa-cog"></i> Settings
+                    </button>
+                    <button onclick="refreshStats()" class="footer-link">
+                        <i class="fas fa-chart-bar"></i> Stats
+                    </button>
+                </div>
+                <div class="footer-section">
+                    <h3>Connection</h3>
+                    <p id="connectionStatus">Connected to server</p>
+                    <p>SMTP: <span id="footerSmtp">localhost:1025</span></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2024 Public Email Server | Running on Termux</p>
+                <p id="currentTime">Loading...</p>
+            </div>
+        </footer>
+
+        <!-- Toast Notifications -->
+        <div id="toastContainer"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
